@@ -1,0 +1,12 @@
+{
+  "name": "tobias14/clearlag",
+  "require": {
+    "pocketmine/pocketmine-mp": "^4.0.0",
+    "phpstan/phpstan": "^1.2.0"
+  },
+  "autoload": {
+    "psr-4": {
+      "": "src"
+    }
+  }
+}

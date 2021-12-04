@@ -1,0 +1,14 @@
+---
+# The message prefix which will be displayed in the chat
+message-prefix: '&7[&cClearLag&7]'
+
+# The time span between each clear-lag
+# m=minutes,s=seconds
+# e.g. 30m20s
+clear-delay: 15m
+
+# Enter here mobs or items, which should not be cleared
+# e.g. Zombie or Pig or Beacon
+exceptions:
+  - placeholder
+...
