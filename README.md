@@ -16,3 +16,5 @@ ClearLag is a plugin for Pocketmine-MP that removes entities after a certain per
 
 ## License
 - GPL-3.0
+
+<sub><sup>Icon by <a href="https://icons8.com/">Icons8</a></sup></sub>
