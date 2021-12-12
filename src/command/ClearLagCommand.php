@@ -5,12 +5,13 @@ namespace tobias14\clearlag\command;
 
 use pocketmine\command\Command;
 use pocketmine\command\CommandSender;
+use pocketmine\plugin\PluginOwned;
 use pocketmine\utils\TextFormat;
 use tobias14\clearlag\ClearEntitiesTrait;
 use tobias14\clearlag\ClearLag;
 use tobias14\clearlag\utils\TranslationTrait;
 
-class ClearLagCommand extends Command
+class ClearLagCommand extends Command implements PluginOwned
 {
 
     use TranslationTrait;
@@ -53,6 +54,11 @@ class ClearLagCommand extends Command
             default:
                 $sender->sendMessage($prefix . TextFormat::RED . $this->translate('clearlag.command.invalidArgument', [$args[0]]));
         }
+    }
+
+    public function getOwningPlugin(): ClearLag
+    {
+        return $this->plugin;
     }
 
 }
