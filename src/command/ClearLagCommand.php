@@ -5,60 +5,54 @@ namespace tobias14\clearlag\command;
 
 use pocketmine\command\Command;
 use pocketmine\command\CommandSender;
+use pocketmine\command\utils\InvalidCommandSyntaxException;
+use pocketmine\player\Player;
 use pocketmine\plugin\PluginOwned;
 use pocketmine\utils\TextFormat;
-use tobias14\clearlag\ClearEntitiesTrait;
 use tobias14\clearlag\ClearLag;
-use tobias14\clearlag\utils\TranslationTrait;
+use tobias14\clearlag\utils\Messages;
 
-class ClearLagCommand extends Command implements PluginOwned
+final class ClearLagCommand extends Command implements PluginOwned
 {
 
-    use TranslationTrait;
-    use ClearEntitiesTrait;
+    private const ACTION_ARGUMENT = 'clear';
 
     /**
-     * @param string[] $exceptions
+     * @param string $name
+     * @param string $description
      */
-    public function __construct(protected ClearLag $plugin, protected array $exceptions)
+    public function __construct(string $name, string $description)
     {
-        parent::__construct($this->translate('clearlag.command.name'), $this->translate('clearlag.command.description'));
+        parent::__construct($name, $description, '/' . $name . ' ' . self::ACTION_ARGUMENT);
 
-        $this->setUsage($this->translate('clearlag.command.usage'));
         $this->setPermission('clearlag.command');
     }
 
     public function execute(CommandSender $sender, string $commandLabel, array $args)
     {
-        $prefix = trim($this->plugin->getMessagePrefix()) . ' ';
-        if($this->plugin->isDisabled()) {
-            $sender->sendMessage($prefix . TextFormat::RED . $this->translate('plugin.disabled'));
+        if($this->getOwningPlugin()->isDisabled()) {
+            $sender->sendMessage(TextFormat::RED . 'This plugin is disabled!');
             return;
         }
-        if(!$this->testPermissionSilent($sender)) {
-            $sender->sendMessage($prefix . TextFormat::RED . $this->translate('clearlag.command.noperms'));
+        if(!$this->testPermission($sender)) {
             return;
         }
-        if(count($args) < 1) {
-            /** @var string $usage */
-            $usage = $this->getUsage();
-            $sender->sendMessage($prefix . TextFormat::colorize($usage));
+        if(!($sender instanceof Player)) {
+            $sender->sendMessage(TextFormat::RED . 'Please use this command ingame!');
             return;
         }
-        switch($args[0]) {
-            case 'clear':
-                $items = $this->clearItems($this->exceptions);
-                $entities = $this->clearEntities($this->exceptions);
-                $sender->sendMessage($prefix . TextFormat::colorize($this->translate('clearlag.cleared', [$items, $entities])));
-                break;
-            default:
-                $sender->sendMessage($prefix . TextFormat::RED . $this->translate('clearlag.command.invalidArgument', [$args[0]]));
+        if(count($args) < 1 || $args[0] !== self::ACTION_ARGUMENT) {
+            throw new InvalidCommandSyntaxException();
         }
+        $result = ClearLag::getInstance()->doClear();
+        $message = Messages::SUCCESS_MESSAGE();
+        $message->replace(['{ENTITY_COUNT}' => (string) $result['entity_count'], '{ITEM_COUNT}' => (string) $result['item_count']]);
+        $message->sendTo($sender);
     }
 
     public function getOwningPlugin(): ClearLag
     {
-        return $this->plugin;
+        return ClearLag::getInstance();
     }
 
 }

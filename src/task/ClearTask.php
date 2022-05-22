@@ -4,76 +4,55 @@ declare(strict_types=1);
 namespace tobias14\clearlag\task;
 
 use pocketmine\scheduler\Task;
-use pocketmine\utils\TextFormat;
-use tobias14\clearlag\ClearEntitiesTrait;
 use tobias14\clearlag\ClearLag;
-use tobias14\clearlag\utils\TimeParserTrait;
-use tobias14\clearlag\utils\TranslationTrait;
+use tobias14\clearlag\preferences\Preferences;
+use tobias14\clearlag\utils\Messages;
+use tobias14\clearlag\utils\TimeUtils;
 
 final class ClearTask extends Task
 {
 
-    use TranslationTrait;
-    use ClearEntitiesTrait;
-    use TimeParserTrait;
+    private const HARDCODED_ALERT_TIMES = [0x384, 0x258, 0x12C, 0xF0, 0xB4, 0x78, 0x3C, 0x1E, 0x14, 0xA, 0x5, 0x4, 0x3, 0x2, 0x1];
+
+    /**
+     * @param Preferences $preferences
+     */
+    public static function run(Preferences $preferences): void
+    {
+        ClearLag::getInstance()->getScheduler()->scheduleRepeatingTask(new self($preferences), 20);
+    }
 
     /** @var int $timer */
     private int $timer;
 
-    /** @var int[] $alertTimes */
-    private array $alertTimes;
-
     /**
-     * @param string[] $exceptions
+     * @param Preferences $preferences
      */
-    public static function run(int $delay, array $exceptions): void
+    public function __construct(private Preferences $preferences)
     {
-        ClearLag::getInstance()->getScheduler()->scheduleRepeatingTask(new self($delay, $exceptions), 20);
-    }
-
-    /**
-     * @param string[] $exceptions
-     */
-    public function __construct(private int $delay, private array $exceptions)
-    {
-        // Do not start immediately after the server start (add 30)
-        // Do not wait too long, because of impatience (set to 930)
-        $this->timer = $this->delay > 930 ? 930 : $this->delay + 30;
-
-        $alertTimes = ['15m', '10m', '5m', '4m', '3m', '2m', '1m', '30s', '20s', '10s', '5s', '4s', '3s', '2s', '1s'];
-        $this->alertTimes = $this->parseTimeStrings($alertTimes);
+        $this->timer = min(0x3A2, $this->preferences->getRemovalPreferences()->getDelay()); // Do not wait too long after server start. (Set to <= 930)
     }
 
     public function onRun(): void
     {
-        $this->timer--;
-
-        if(in_array($this->timer, $this->alertTimes)) {
-            $unit = $this->translate($this->findHPU($this->timer));
-            $time = $this->toHPU($this->timer);
-            $this->broadcast($this->translate('clearlag.warning', [$time, $unit]));
+        if(in_array($this->timer, self::HARDCODED_ALERT_TIMES)) {
+            $message = Messages::ALERT_MESSAGE();
+            $unit = $this->preferences->getTranslations()->get(TimeUtils::getHighestUnit($this->timer))?->getText();
+            $message->replace(['{TIME}' => (string) TimeUtils::toHighestUnit($this->timer), '{UNIT}' => $unit]);
+            $message->broadcast($this->preferences->getRemovalPreferences()->getConsoleLogging());
         }
 
         if($this->timer === 0) {
-            $this->doClear();
+            $result = ClearLag::getInstance()->doClear();
+            $message = Messages::SUCCESS_MESSAGE();
+            $message->replace(['{ENTITY_COUNT}' => (string) $result['entity_count'], '{ITEM_COUNT}' => (string) $result['item_count']]);
+            $message->broadcast($this->preferences->getRemovalPreferences()->getConsoleLogging());
+
+            $delay = $this->preferences->getRemovalPreferences()->getDelay();
+            $this->timer = in_array($delay, self::HARDCODED_ALERT_TIMES) ? $delay + 0x5 : $delay;
         }
-    }
 
-    private function doClear(): void
-    {
-        // Add 5 as a short delay between clear-lags
-        $this->timer = $this->delay + 5;
-
-        $items = $this->clearItems($this->exceptions);
-        $entities = $this->clearEntities($this->exceptions);
-
-        $this->broadcast($this->translate('clearlag.cleared', [$items, $entities]));
-    }
-
-    private function broadcast(string $message): void
-    {
-        $server = ClearLag::getInstance()->getServer();
-        $server->broadcastMessage(trim(ClearLag::getInstance()->getMessagePrefix()) . ' ' . TextFormat::colorize($message));
+        $this->timer--;
     }
 
 }

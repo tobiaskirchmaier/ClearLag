@@ -1,6 +1,6 @@
 ---
 name: ClearLag
-version: 1.0.0
+version: 2.0.0
 main: tobias14\clearlag\ClearLag
 src-namespace-prefix: tobias14\clearlag
 api: 4.0.0

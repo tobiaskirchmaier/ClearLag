@@ -3,21 +3,20 @@ declare(strict_types=1);
 
 namespace tobias14\clearlag;
 
-use pocketmine\lang\Language;
+use JetBrains\PhpStorm\ArrayShape;
+use pocketmine\entity\Living;
+use pocketmine\entity\object\ExperienceOrb;
+use pocketmine\entity\object\ItemEntity;
 use pocketmine\plugin\PluginBase;
-use pocketmine\utils\TextFormat;
 use tobias14\clearlag\command\ClearLagCommand;
+use tobias14\clearlag\preferences\Preferences;
+use tobias14\clearlag\preferences\types\EntityPreferences;
 use tobias14\clearlag\task\ClearTask;
-use tobias14\clearlag\utils\ParseTimeException;
-use tobias14\clearlag\utils\TimeParserTrait;
-use tobias14\clearlag\utils\TranslationTrait;
-use function define;
+use tobias14\clearlag\utils\EntityRemover;
+use tobias14\clearlag\utils\Messages;
 
 class ClearLag extends PluginBase
 {
-
-    use TimeParserTrait;
-    use TranslationTrait;
 
     /** @var self $instance */
     private static self $instance;
@@ -27,67 +26,52 @@ class ClearLag extends PluginBase
         return self::$instance;
     }
 
-    /** @var string $prefix */
-    protected string $prefix;
-
-    /** @var int $clearDelay */
-    protected int $clearDelay;
-
-    /** @var string[] $entityExceptions */
-    protected array $entityExceptions;
-
-    /** @var Language $lang */
-    protected Language $lang;
-
-    public function getLanguage(): Language
-    {
-        return $this->lang;
-    }
-
-    public function getMessagePrefix(): string
-    {
-        return $this->prefix;
-    }
+    /** @var Preferences $preferences */
+    private Preferences $preferences;
 
     protected function onEnable(): void
     {
         self::$instance = $this;
-        define("tobias14\clearlag\LANGUAGE", 'lang_' . $this->getDescription()->getVersion());
-        $this->reloadConfig();
-        $this->saveResource(LANGUAGE . '.ini');
-        $this->initialize();
-        ClearTask::run($this->clearDelay, $this->entityExceptions);
-        $this->getServer()->getCommandMap()->register('ClearLag', new ClearLagCommand($this, $this->entityExceptions));
-    }
 
-    private function initialize(): void
-    {
+        $this->reloadConfig();
         $config = $this->getConfig();
 
-        /** @var string $prefix */
-        $prefix = $config->get('message-prefix', '&7[&cClearLag&7]');
-        $this->prefix = TextFormat::colorize($prefix) . TextFormat::RESET;
-
-        /** @var string $clearDelay */
-        $clearDelay = $config->get('clear-delay', '15m');
-        try {
-            $this->clearDelay = $this->parseTimeString($clearDelay);
-        } catch(ParseTimeException $e) {
-            $this->getLogger()->critical($e->getMessage());
-            $this->getLogger()->critical('Using default value...');
-            $this->clearDelay = 900;
+        if(!version_compare($config->get('metadata/version', '1.0.0'), $this->getDescription()->getVersion(), '>=')) {
+            $this->getLogger()->warning('Configuration file is not up to date! Delete the current config-file and restart the server to update it.');
         }
 
-        $exceptions = $config->get('exceptions', []);
-        if(!is_array($exceptions)) {
-            $this->getLogger()->critical('Wrong type for exceptions key: expected array');
-            $exceptions = [];
-        }
-        /** @var string[] $exceptions */
-        $this->entityExceptions = $exceptions;
+        $this->preferences = new Preferences($config);
 
-        # @phpstan-ignore-next-line
-        $this->lang = new Language(LANGUAGE, $this->getDataFolder(), LANGUAGE);
+        (new Messages($this->preferences));
+
+        ClearTask::run($this->preferences);
+
+        $cmdPreferences = $this->preferences->getCommandPreferences();
+        if($cmdPreferences->isEnabled()) {
+            $this->getServer()->getCommandMap()->register('ClearLag', new ClearLagCommand($cmdPreferences->getName(), $cmdPreferences->getDescription()));
+        }
+    }
+
+    /**
+     * @return int[]
+     */
+    #[ArrayShape(['item_count' => "int", 'entity_count' => "int"])]
+    public function doClear(): array
+    {
+        $removalPreferences = $this->preferences->getRemovalPreferences();
+        $entityPreferences = $removalPreferences->getEntityPreferences();
+
+        if($entityPreferences->get(EntityPreferences::PREFERENCE_ITEMS) || $entityPreferences->get(EntityPreferences::PREFERENCE_ALL)) {
+            $items = EntityRemover::removeEntities([ItemEntity::class], $removalPreferences->getBlacklist());
+        }
+        if($entityPreferences->get(EntityPreferences::PREFERENCE_ALL)) {
+            $entities = EntityRemover::removeEntities(null, $removalPreferences->getBlacklist());
+        } else {
+            $entityTypes = $entityPreferences->get(EntityPreferences::PREFERENCE_LIVING) ? [Living::class] : ($entityPreferences->get(EntityPreferences::PREFERENCE_XPORBS) ? [ExperienceOrb::class] : []);
+            $entityTypes = $entityPreferences->get(EntityPreferences::PREFERENCE_LIVING) && $entityPreferences->get(EntityPreferences::PREFERENCE_XPORBS) ? [Living::class, ExperienceOrb::class] : $entityTypes;
+            $entities = EntityRemover::removeEntities($entityTypes, $removalPreferences->getBlacklist());
+        }
+        return ['item_count' => $items ?? 0, 'entity_count' => $entities];
     }
 
 }
