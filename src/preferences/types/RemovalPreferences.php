@@ -9,10 +9,17 @@ final class RemovalPreferences
     /**
      * @param int $delay Time span between each entity removal.
      * @param bool $consoleLogging
+     * @param int[] $alertTimes
      * @param EntityPreferences $entityPreferences
      * @param string[] $blacklist List of entity-/item-names that should not be removed.
      */
-    public function __construct(private int $delay, private bool $consoleLogging, private EntityPreferences $entityPreferences, private array $blacklist) {}
+    public function __construct(
+        private int $delay,
+        private bool $consoleLogging,
+        private array $alertTimes,
+        private EntityPreferences $entityPreferences,
+        private array $blacklist
+    ) {}
 
     /**
      * @return int
@@ -28,6 +35,14 @@ final class RemovalPreferences
     public function getConsoleLogging(): bool
     {
         return $this->consoleLogging;
+    }
+
+    /**
+     * @return int[]
+     */
+    public function getAlertTimes(): array
+    {
+        return $this->alertTimes;
     }
 
     /**
