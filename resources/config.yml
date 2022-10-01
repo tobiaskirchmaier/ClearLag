@@ -9,7 +9,7 @@
 #  \_____ |_|\___|\__,_|_|  |______\__,_|\__, |
 #                                         __/ |
 #                                        |___/
-metadata/version: 2.0.0
+metadata/version: 2.1.0
 # metadata/autor: tobias14
 # metadata/website: https://github.com/Tobias-2006/ClearLag
 #
@@ -66,6 +66,11 @@ clearlag/preferences:
   # If false, the messages are only sent to the players.
   # True by default.
   logging/console: true
+
+  # Set here when ClearLag sends alert messages.
+  # E.g. ["15m", "10m", "5m", "1m", "3s", "2s", "1s"]
+  # Empty array, for the default times.
+  logging/alert-times: []
 
   # Specify here which entities are to be removed and which are not.
   # All entities that inherit from Human are automatically excluded.

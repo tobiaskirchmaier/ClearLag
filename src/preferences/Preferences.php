@@ -90,9 +90,18 @@ final class Preferences
             $clearDelay = 0x384; // 15 minutes
         }
 
+        try {
+            $alertTimes = array_map(function(string $timeString): int {
+                return TimeUtils::parseTimeString($timeString);
+            }, $config->getNested('clearlag/preferences.logging/alert-times', []));
+        } catch(Exception) {
+            $alertTimes = [];
+        }
+
         $this->removalPreferences = new RemovalPreferences(
             $clearDelay,
             $config->getNested('clearlag/preferences.logging/console', true),
+            $alertTimes,
             $entityPreferences,
             $config->getNested('clearlag/preferences.entities.entity/blacklist', [])
         );

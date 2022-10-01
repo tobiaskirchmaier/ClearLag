@@ -35,7 +35,8 @@ final class ClearTask extends Task
 
     public function onRun(): void
     {
-        if(in_array($this->timer, self::HARDCODED_ALERT_TIMES)) {
+        $alertTimes = $this->preferences->getRemovalPreferences()->getAlertTimes();
+        if(in_array($this->timer, $alertTimes !== [] ? $alertTimes : self::HARDCODED_ALERT_TIMES)) {
             $message = Messages::ALERT_MESSAGE();
             $unit = $this->preferences->getTranslations()->get(TimeUtils::getHighestUnit($this->timer))?->getText();
             $message->replace(['{TIME}' => (string) TimeUtils::toHighestUnit($this->timer), '{UNIT}' => $unit]);
