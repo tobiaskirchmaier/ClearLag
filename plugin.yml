@@ -3,7 +3,7 @@ name: ClearLag
 version: 2.1.0
 main: tobias14\clearlag\ClearLag
 src-namespace-prefix: tobias14\clearlag
-api: 4.0.0
+api: 5.0.0
 author: tobias14
 website: https://github.com/Tobias-2006/ClearLag
 
